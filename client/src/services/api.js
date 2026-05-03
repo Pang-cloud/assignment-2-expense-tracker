@@ -1,15 +1,30 @@
-import axios from 'axios';
+import axios from "axios";
 
-const BASE_URL = 'http://localhost:5001/expenses';
+const api = axios.create({
+  baseURL: "http://localhost:5001",
+});
 
-// Fetch all expense records
-export const getExpenses = () => axios.get(BASE_URL);
+// Add token to each request after the user logs in
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
 
-// Create a new expense record
-export const createExpense = (data) => axios.post(BASE_URL, data);
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
 
-// Update an existing expense record by ID
-export const updateExpense = (id, data) => axios.put(`${BASE_URL}/${id}`, data);
+  return config;
+});
 
-// Delete an expense record by ID
-export const deleteExpense = (id) => axios.delete(`${BASE_URL}/${id}`);
+export const registerUser = (data) => api.post("/auth/register", data);
+export const loginUser = (data) => api.post("/auth/login", data);
+export const logoutUser = () => api.post("/auth/logout");
+
+export const getProfile = () => api.get("/users/me");
+export const updateProfile = (data) => api.put("/users/me", data);
+
+export const getExpenses = () => api.get("/expenses");
+export const createExpense = (data) => api.post("/expenses", data);
+export const updateExpense = (id, data) => api.put(`/expenses/${id}`, data);
+export const deleteExpense = (id) => api.delete(`/expenses/${id}`);
+
+export default api;

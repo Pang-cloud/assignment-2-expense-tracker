@@ -1,38 +1,249 @@
-.App {
+body {
+  margin: 0;
+  background: #f0f2f5;
+}
+
+.app-layout {
+  min-height: 100vh;
+  background: #f0f2f5;
+}
+
+.app-header {
+  height: 68px;
+  padding: 0 24px;
+  background: #001529;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 6px 18px rgba(0, 21, 41, 0.18);
+}
+
+.header-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.header-title-group h2 {
+  color: white;
+  margin: 0;
+  font-weight: 700;
+}
+
+.user-badge {
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.app-content {
+  padding: 24px;
+  max-width: 1320px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.page-alert {
+  margin-bottom: 16px;
+  border-radius: 10px;
+}
+
+.summary-row {
+  margin-bottom: 24px;
+}
+
+.summary-card {
+  border-radius: 14px;
+  background: white;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+}
+
+.summary-card .ant-card-body {
+  padding: 22px 24px;
+}
+
+.summary-card .ant-statistic-title {
+  font-weight: 600;
+  color: #5f6f83;
+}
+
+.summary-card .ant-statistic-content {
+  font-weight: 700;
+}
+
+.total-card .ant-statistic-content {
+  color: #cf1322;
+}
+
+.month-card .ant-statistic-content {
+  color: #fa8c16;
+}
+
+.average-card .ant-statistic-content {
+  color: #1677ff;
+}
+
+.main-card,
+.content-card,
+.profile-card,
+.auth-card {
+  border-radius: 14px;
+  background: white;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+.main-card .ant-card-body {
+  padding: 24px;
+}
+
+.table-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.search-input {
+  max-width: 360px;
+}
+
+.profile-card {
+  min-height: 100%;
   text-align: center;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+.profile-card .ant-card-body {
+  padding: 32px 20px;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+.profile-avatar {
+  width: 68px;
+  height: 68px;
+  margin: 0 auto 16px;
+  border-radius: 18px;
+  background: #e6f4ff;
+  color: #1677ff;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  font-size: 28px;
 }
 
-.App-link {
-  color: #61dafb;
+.profile-name {
+  margin-bottom: 4px !important;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
+.profile-email {
+  display: block;
+  margin-bottom: 14px;
+  color: #697586;
+}
+
+.auth-content {
+  min-height: calc(100vh - 68px);
+  padding: 42px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f0f2f5;
+}
+
+.auth-card {
+  width: 430px;
+  max-width: 100%;
+}
+
+.auth-card .ant-card-body {
+  padding: 32px;
+}
+
+.auth-title-block {
+  text-align: center;
+}
+
+.auth-icon {
+  width: 54px;
+  height: 54px;
+  margin-bottom: 12px;
+  border-radius: 16px;
+  background: #e6f4ff;
+  color: #1677ff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+}
+
+.auth-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 12px;
+  background: #f3f6fa;
+}
+
+.auth-switch .ant-btn {
+  height: 38px;
+}
+
+.ant-tabs-nav {
+  margin-bottom: 20px !important;
+}
+
+.ant-tabs-tab {
+  padding: 10px 14px !important;
+}
+
+.ant-tabs-tab-active {
+  background: #f0f7ff;
+  border-radius: 10px;
+}
+
+.ant-table-wrapper {
+  overflow-x: auto;
+}
+
+.ant-table {
+  border-radius: 12px;
+}
+
+.ant-btn {
+  font-weight: 500;
+}
+
+.ant-btn-primary {
+  background: #1677ff;
+}
+
+@media (max-width: 768px) {
+  .app-header {
+    height: auto;
+    min-height: 76px;
+    padding: 14px 18px;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
   }
-  to {
-    transform: rotate(360deg);
+
+  .app-content {
+    padding: 18px;
+  }
+
+  .table-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .search-input {
+    max-width: 100%;
   }
 }
