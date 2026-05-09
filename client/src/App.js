@@ -40,12 +40,17 @@ import {
   createExpense,
   updateExpense,
   deleteExpense,
+  getBudgets,
+  createBudget,
+  updateBudget,
+  deleteBudget,
 } from "./services/api";
 
 import ExpenseTable from "./components/ExpenseTable";
 import ExpenseForm from "./components/ExpenseForm";
 import CategorySummary from "./components/CategorySummary";
 import MonthlyTrend from "./components/MonthlyTrend";
+import BudgetPanel from "./components/BudgetPanel";
 
 const { Header, Content } = Layout;
 const { Title, Text } = Typography;
@@ -61,9 +66,13 @@ const AppContent = () => {
   const [authLoading, setAuthLoading] = useState(false);
 
   const [expenses, setExpenses] = useState([]);
+  const [budgets, setBudgets] = useState([]);
+
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+
   const [loading, setLoading] = useState(false);
+  const [budgetLoading, setBudgetLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -84,6 +93,7 @@ const AppContent = () => {
     localStorage.removeItem("user");
     setCurrentUser(null);
     setExpenses([]);
+    setBudgets([]);
   };
 
   // Load expenses for the logged-in user
@@ -104,6 +114,25 @@ const AppContent = () => {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Load budgets for the logged-in user
+  const fetchBudgets = async () => {
+    setBudgetLoading(true);
+
+    try {
+      const res = await getBudgets();
+      setBudgets(res.data);
+    } catch (err) {
+      if (err.response?.status === 401) {
+        clearLogin();
+        message.error("Please login again.");
+      } else {
+        message.error("Failed to load budgets.");
+      }
+    } finally {
+      setBudgetLoading(false);
     }
   };
 
@@ -132,6 +161,7 @@ const AppContent = () => {
     if (currentUser) {
       fetchProfile();
       fetchExpenses();
+      fetchBudgets();
     }
   }, []);
 
@@ -158,6 +188,7 @@ const AppContent = () => {
       message.success(authMode === "login" ? "Login successful." : "Account created.");
 
       fetchExpenses();
+      fetchBudgets();
     } catch (err) {
       const errorMessage = err.response?.data?.error || "Something went wrong. Please try again.";
       message.error(errorMessage);
@@ -195,6 +226,7 @@ const AppContent = () => {
       setIsModalVisible(false);
       expenseForm.resetFields();
       setEditingItem(null);
+
       fetchExpenses();
     } catch (err) {
       message.error("Failed to save. Please try again.");
@@ -205,9 +237,50 @@ const AppContent = () => {
     try {
       await deleteExpense(id);
       message.success("Expense deleted.");
+
       fetchExpenses();
     } catch (err) {
       message.error("Failed to delete.");
+    }
+  };
+
+  const handleCreateBudget = async (values) => {
+    try {
+      await createBudget(values);
+      message.success("Budget added successfully.");
+
+      await fetchBudgets();
+      return true;
+    } catch (err) {
+      const errorMessage = err.response?.data?.error || "Failed to add budget.";
+      message.error(errorMessage);
+      return false;
+    }
+  };
+
+  const handleUpdateBudget = async (id, values) => {
+    try {
+      await updateBudget(id, values);
+      message.success("Budget updated successfully.");
+
+      await fetchBudgets();
+      return true;
+    } catch (err) {
+      const errorMessage = err.response?.data?.error || "Failed to update budget.";
+      message.error(errorMessage);
+      return false;
+    }
+  };
+
+  const handleDeleteBudget = async (id) => {
+    try {
+      await deleteBudget(id);
+      message.success("Budget deleted.");
+
+      await fetchBudgets();
+    } catch (err) {
+      const errorMessage = err.response?.data?.error || "Failed to delete budget.";
+      message.error(errorMessage);
     }
   };
 
@@ -244,13 +317,13 @@ const AppContent = () => {
     }
   };
 
-  const totalAmount = expenses.reduce((sum, item) => sum + (item.amount || 0), 0);
+  const totalAmount = expenses.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
   const thisMonth = new Date().toISOString().substring(0, 7);
 
   const monthlyTotal = expenses
     .filter((item) => item.date?.startsWith(thisMonth))
-    .reduce((sum, item) => sum + (item.amount || 0), 0);
+    .reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
   const averageAmount = expenses.length > 0 ? totalAmount / expenses.length : 0;
 
@@ -297,6 +370,24 @@ const AppContent = () => {
         </span>
       ),
       children: <CategorySummary expenses={expenses} />,
+    },
+    {
+      key: "budget",
+      label: (
+        <span>
+          <DollarOutlined /> Budgets
+        </span>
+      ),
+      children: (
+        <BudgetPanel
+          budgets={budgets}
+          expenses={expenses}
+          loading={budgetLoading}
+          onCreate={handleCreateBudget}
+          onUpdate={handleUpdateBudget}
+          onDelete={handleDeleteBudget}
+        />
+      ),
     },
     {
       key: "monthly",

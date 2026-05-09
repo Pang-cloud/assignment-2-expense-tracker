@@ -4,7 +4,7 @@ const api = axios.create({
   baseURL: "http://localhost:5001",
 });
 
-// Add token to each request after the user logs in
+// Put the login token into requests for protected pages
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
 
@@ -26,5 +26,10 @@ export const getExpenses = () => api.get("/expenses");
 export const createExpense = (data) => api.post("/expenses", data);
 export const updateExpense = (id, data) => api.put(`/expenses/${id}`, data);
 export const deleteExpense = (id) => api.delete(`/expenses/${id}`);
+
+export const getBudgets = () => api.get("/budgets");
+export const createBudget = (data) => api.post("/budgets", data);
+export const updateBudget = (id, data) => api.put(`/budgets/${id}`, data);
+export const deleteBudget = (id) => api.delete(`/budgets/${id}`);
 
 export default api;
