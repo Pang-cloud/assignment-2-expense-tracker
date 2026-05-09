@@ -137,6 +137,39 @@ const ExpenseSchema = new mongoose.Schema(
 
 const Expense = mongoose.model("Expense", ExpenseSchema, "expenses");
 
+const BudgetSchema = new mongoose.Schema(
+  {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    month: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    limit: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+    note: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+  },
+  {
+    timestamps: true,
+  },
+);
+
+// A user should only have one budget for the same month
+BudgetSchema.index({ userId: 1, month: 1 }, { unique: true });
+
+const Budget = mongoose.model("Budget", BudgetSchema, "budgets");
+
 // Helper functions
 
 const formatUser = (user) => {
@@ -174,6 +207,10 @@ const createActivityLog = async (userId, action, details = "") => {
   } catch (err) {
     console.error("Failed to create activity log:", err.message);
   }
+};
+
+const isValidBudgetMonth = (month) => {
+  return /^\d{4}-\d{2}$/.test(month);
 };
 
 // Check if the user is logged in
@@ -433,7 +470,9 @@ app.get("/users/me/activities", authenticateToken, async (req, res) => {
 
 app.get("/admin/users", authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const users = await User.find().select("-passwordHash").sort({ createdAt: -1 });
+    const users = await User.find().select("-passwordHash").sort({
+      createdAt: -1,
+    });
 
     return res.json(users);
   } catch (err) {
@@ -534,9 +573,9 @@ app.delete("/admin/users/:id", authenticateToken, requireAdmin, async (req, res)
 
 app.get("/admin/activities", authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const activities = await ActivityLog.find()
-      .populate("userId", "username email role")
-      .sort({ createdAt: -1 });
+    const activities = await ActivityLog.find().populate("userId", "username email role").sort({
+      createdAt: -1,
+    });
 
     return res.json(activities);
   } catch (err) {
@@ -570,9 +609,17 @@ app.post("/expenses", authenticateToken, async (req, res) => {
   try {
     const { title, category, amount, date, description } = req.body;
 
-    if (!title || !category || amount === undefined || !date) {
+    if (!title || !category || amount === undefined || amount === "" || !date) {
       return res.status(400).json({
         error: "Title, category, amount, and date are required.",
+      });
+    }
+
+    const expenseAmount = Number(amount);
+
+    if (!Number.isFinite(expenseAmount) || expenseAmount < 0) {
+      return res.status(400).json({
+        error: "Amount must be a valid number.",
       });
     }
 
@@ -580,7 +627,7 @@ app.post("/expenses", authenticateToken, async (req, res) => {
       userId: req.user._id,
       title,
       category,
-      amount,
+      amount: expenseAmount,
       date,
       description,
     });
@@ -600,12 +647,26 @@ app.post("/expenses", authenticateToken, async (req, res) => {
 
 app.put("/expenses/:id", authenticateToken, async (req, res) => {
   try {
+    const updateData = { ...req.body };
+
+    if (updateData.amount !== undefined) {
+      const expenseAmount = Number(updateData.amount);
+
+      if (!Number.isFinite(expenseAmount) || expenseAmount < 0) {
+        return res.status(400).json({
+          error: "Amount must be a valid number.",
+        });
+      }
+
+      updateData.amount = expenseAmount;
+    }
+
     const updatedExpense = await Expense.findOneAndUpdate(
       {
         _id: req.params.id,
         userId: req.user._id,
       },
-      req.body,
+      updateData,
       {
         new: true,
         runValidators: true,
@@ -659,6 +720,183 @@ app.delete("/expenses/:id", authenticateToken, async (req, res) => {
   } catch (err) {
     return res.status(500).json({
       error: "Failed to delete expense.",
+      details: err.message,
+    });
+  }
+});
+
+// Budget routes
+
+app.get("/budgets", authenticateToken, async (req, res) => {
+  try {
+    const budgets = await Budget.find({
+      userId: req.user._id,
+    }).sort({
+      month: -1,
+    });
+
+    return res.json(budgets);
+  } catch (err) {
+    return res.status(500).json({
+      error: "Failed to fetch budgets.",
+      details: err.message,
+    });
+  }
+});
+
+app.post("/budgets", authenticateToken, async (req, res) => {
+  try {
+    const { month, limit, note } = req.body;
+
+    if (!month || limit === undefined || limit === "") {
+      return res.status(400).json({
+        error: "Month and budget limit are required.",
+      });
+    }
+
+    if (!isValidBudgetMonth(month)) {
+      return res.status(400).json({
+        error: "Month must use YYYY-MM format.",
+      });
+    }
+
+    const budgetLimit = Number(limit);
+
+    if (!Number.isFinite(budgetLimit) || budgetLimit <= 0) {
+      return res.status(400).json({
+        error: "Budget limit must be greater than 0.",
+      });
+    }
+
+    const newBudget = new Budget({
+      userId: req.user._id,
+      month,
+      limit: budgetLimit,
+      note,
+    });
+
+    await newBudget.save();
+
+    await createActivityLog(req.user._id, "CREATE_BUDGET", `Created budget for ${month}.`);
+
+    return res.status(201).json(newBudget);
+  } catch (err) {
+    if (err.code === 11000) {
+      return res.status(409).json({
+        error: "Budget for this month already exists.",
+      });
+    }
+
+    return res.status(400).json({
+      error: "Failed to create budget.",
+      details: err.message,
+    });
+  }
+});
+
+app.put("/budgets/:id", authenticateToken, async (req, res) => {
+  try {
+    const { month, limit, note } = req.body;
+
+    const updateData = {};
+
+    if (month !== undefined) {
+      if (!month || !isValidBudgetMonth(month)) {
+        return res.status(400).json({
+          error: "Month must use YYYY-MM format.",
+        });
+      }
+
+      updateData.month = month;
+    }
+
+    if (limit !== undefined) {
+      const budgetLimit = Number(limit);
+
+      if (!Number.isFinite(budgetLimit) || budgetLimit <= 0) {
+        return res.status(400).json({
+          error: "Budget limit must be greater than 0.",
+        });
+      }
+
+      updateData.limit = budgetLimit;
+    }
+
+    if (note !== undefined) {
+      updateData.note = note;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({
+        error: "No budget data provided.",
+      });
+    }
+
+    const updatedBudget = await Budget.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        userId: req.user._id,
+      },
+      updateData,
+      {
+        new: true,
+        runValidators: true,
+      },
+    );
+
+    if (!updatedBudget) {
+      return res.status(404).json({
+        error: "Budget not found.",
+      });
+    }
+
+    await createActivityLog(
+      req.user._id,
+      "UPDATE_BUDGET",
+      `Updated budget for ${updatedBudget.month}.`,
+    );
+
+    return res.json(updatedBudget);
+  } catch (err) {
+    if (err.code === 11000) {
+      return res.status(409).json({
+        error: "Budget for this month already exists.",
+      });
+    }
+
+    return res.status(400).json({
+      error: "Failed to update budget.",
+      details: err.message,
+    });
+  }
+});
+
+app.delete("/budgets/:id", authenticateToken, async (req, res) => {
+  try {
+    const deletedBudget = await Budget.findOneAndDelete({
+      _id: req.params.id,
+      userId: req.user._id,
+    });
+
+    if (!deletedBudget) {
+      return res.status(404).json({
+        error: "Budget not found.",
+      });
+    }
+
+    await createActivityLog(
+      req.user._id,
+      "DELETE_BUDGET",
+      `Deleted budget for ${deletedBudget.month}.`,
+    );
+
+    return res.json({
+      message: "Budget deleted successfully.",
+      deletedBudget,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error: "Failed to delete budget.",
       details: err.message,
     });
   }
