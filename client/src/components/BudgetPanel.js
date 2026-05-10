@@ -73,7 +73,9 @@ const BudgetPanel = ({ budgets, expenses, loading, onCreate, onUpdate, onDelete 
   const budgetLimit = Number(selectedBudget?.limit || 0);
   const remaining = budgetLimit - monthSpending;
 
-  const usedPercent = budgetLimit > 0 ? Math.min((monthSpending / budgetLimit) * 100, 100) : 0;
+  const actualUsedPercent = budgetLimit > 0 ? (monthSpending / budgetLimit) * 100 : 0;
+  const progressPercent = Math.min(actualUsedPercent, 100);
+  const overPercent = Math.max(actualUsedPercent - 100, 0);
 
   const isOverBudget = selectedBudget && monthSpending > budgetLimit;
 
@@ -182,12 +184,7 @@ const BudgetPanel = ({ budgets, expenses, loading, onCreate, onUpdate, onDelete 
   return (
     <Space direction="vertical" size={20} style={{ width: "100%" }}>
       <div className="budget-toolbar">
-        <div>
-          <Text className="budget-section-title">Monthly Budget</Text>
-          <Text type="secondary" className="budget-section-subtitle">
-            Set a monthly limit and compare it with your real spending.
-          </Text>
-        </div>
+        <Text className="budget-section-title">Monthly Budget</Text>
 
         <Space wrap>
           <Input
@@ -256,13 +253,18 @@ const BudgetPanel = ({ budgets, expenses, loading, onCreate, onUpdate, onDelete 
           <div>
             <Text strong>{formatMonth(selectedMonth)}</Text>
             <br />
+
             <Text type="secondary">
               {selectedBudget
-                ? isOverBudget
-                  ? "Your spending is above the monthly budget."
-                  : "Your spending is still within the monthly budget."
+                ? `You have used ${actualUsedPercent.toFixed(1)}% of this month's budget.`
                 : "Create a budget to start tracking this month."}
             </Text>
+
+            {selectedBudget && isOverBudget && (
+              <div className="budget-progress-meta">
+                {formatMoney(Math.abs(remaining))} over budget · {overPercent.toFixed(1)}% over
+              </div>
+            )}
           </div>
 
           {selectedBudget && (
@@ -273,8 +275,9 @@ const BudgetPanel = ({ budgets, expenses, loading, onCreate, onUpdate, onDelete 
         </div>
 
         <Progress
-          percent={Number(usedPercent.toFixed(1))}
+          percent={Number(progressPercent.toFixed(1))}
           status={isOverBudget ? "exception" : "active"}
+          format={() => (selectedBudget ? `${actualUsedPercent.toFixed(1)}%` : "0%")}
         />
       </Card>
 
@@ -312,10 +315,24 @@ const BudgetPanel = ({ budgets, expenses, loading, onCreate, onUpdate, onDelete 
           <Form.Item
             name="limit"
             label="Budget Limit ($)"
-            rules={[{ required: true, message: "Please enter a budget limit." }]}
+            rules={[
+              { required: true, message: "Please enter a budget limit." },
+              {
+                validator: (_, value) => {
+                  if (value === undefined || value === null || value === "") {
+                    return Promise.resolve();
+                  }
+
+                  if (Number(value) > 0) {
+                    return Promise.resolve();
+                  }
+
+                  return Promise.reject(new Error("Budget limit must be greater than 0."));
+                },
+              },
+            ]}
           >
             <InputNumber
-              min={1}
               precision={2}
               prefix="$"
               style={{ width: "100%" }}

@@ -59,14 +59,23 @@ body {
 }
 
 .summary-card {
+  min-height: 118px;
   border-radius: 14px;
   background: white;
   box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
   overflow: hidden;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.12);
 }
 
 .summary-card .ant-card-body {
-  padding: 22px 24px;
+  padding: 20px 22px;
 }
 
 .summary-card .ant-statistic-title {
@@ -86,8 +95,12 @@ body {
   color: #fa8c16;
 }
 
+.entries-card .ant-statistic-content {
+  color: #13c2c2;
+}
+
 .average-card .ant-statistic-content {
-  color: #1677ff;
+  color: #722ed1;
 }
 
 .main-card,
@@ -238,11 +251,6 @@ body {
   color: #172033;
 }
 
-.budget-section-subtitle {
-  display: block;
-  margin-top: 4px;
-}
-
 .budget-month-input {
   width: 170px;
 }
@@ -251,6 +259,14 @@ body {
   border-radius: 14px;
   background: white;
   box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.budget-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.12);
 }
 
 .budget-card .ant-card-body {
@@ -295,6 +311,13 @@ body {
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 16px;
+}
+
+.budget-progress-meta {
+  margin-top: 6px;
+  color: #cf1322;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 @media (max-width: 768px) {

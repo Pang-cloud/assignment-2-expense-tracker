@@ -27,6 +27,7 @@ import {
   LogoutOutlined,
   UserOutlined,
   SafetyCertificateOutlined,
+  FileTextOutlined,
 } from "@ant-design/icons";
 import moment from "moment";
 
@@ -325,7 +326,8 @@ const AppContent = () => {
     .filter((item) => item.date?.startsWith(thisMonth))
     .reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
-  const averageAmount = expenses.length > 0 ? totalAmount / expenses.length : 0;
+  const expenseCount = expenses.length;
+  const averageAmount = expenseCount > 0 ? totalAmount / expenseCount : 0;
 
   const tabItems = [
     {
@@ -568,7 +570,7 @@ const AppContent = () => {
         {error && <Alert description={error} type="error" showIcon className="page-alert" />}
 
         <Row gutter={[16, 16]} className="summary-row">
-          <Col xs={24} sm={8}>
+          <Col xs={24} sm={12} lg={6}>
             <Card className="summary-card total-card" variant="borderless">
               <Statistic
                 title="Total Expenses"
@@ -579,7 +581,7 @@ const AppContent = () => {
             </Card>
           </Col>
 
-          <Col xs={24} sm={8}>
+          <Col xs={24} sm={12} lg={6}>
             <Card className="summary-card month-card" variant="borderless">
               <Statistic
                 title="This Month"
@@ -590,10 +592,20 @@ const AppContent = () => {
             </Card>
           </Col>
 
-          <Col xs={24} sm={8}>
+          <Col xs={24} sm={12} lg={6}>
+            <Card className="summary-card entries-card" variant="borderless">
+              <Statistic
+                title="Expense Entries"
+                value={expenseCount}
+                prefix={<FileTextOutlined />}
+              />
+            </Card>
+          </Col>
+
+          <Col xs={24} sm={12} lg={6}>
             <Card className="summary-card average-card" variant="borderless">
               <Statistic
-                title="Average Expense"
+                title="Average per Entry"
                 value={averageAmount}
                 precision={2}
                 prefix={<DollarOutlined />}
