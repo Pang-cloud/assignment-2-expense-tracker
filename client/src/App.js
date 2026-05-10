@@ -28,6 +28,7 @@ import {
   UserOutlined,
   SafetyCertificateOutlined,
   FileTextOutlined,
+  TeamOutlined,
 } from "@ant-design/icons";
 import moment from "moment";
 
@@ -45,6 +46,9 @@ import {
   createBudget,
   updateBudget,
   deleteBudget,
+  getAdminUsers,
+  updateAdminUser,
+  getAdminActivities,
 } from "./services/api";
 
 import ExpenseTable from "./components/ExpenseTable";
@@ -52,6 +56,7 @@ import ExpenseForm from "./components/ExpenseForm";
 import CategorySummary from "./components/CategorySummary";
 import MonthlyTrend from "./components/MonthlyTrend";
 import BudgetPanel from "./components/BudgetPanel";
+import AdminPanel from "./components/AdminPanel";
 
 const { Header, Content } = Layout;
 const { Title, Text } = Typography;
@@ -68,12 +73,16 @@ const AppContent = () => {
 
   const [expenses, setExpenses] = useState([]);
   const [budgets, setBudgets] = useState([]);
+  const [adminUsers, setAdminUsers] = useState([]);
+  const [activities, setActivities] = useState([]);
 
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
 
   const [loading, setLoading] = useState(false);
   const [budgetLoading, setBudgetLoading] = useState(false);
+  const [adminUsersLoading, setAdminUsersLoading] = useState(false);
+  const [activitiesLoading, setActivitiesLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -95,6 +104,8 @@ const AppContent = () => {
     setCurrentUser(null);
     setExpenses([]);
     setBudgets([]);
+    setAdminUsers([]);
+    setActivities([]);
   };
 
   // Load expenses for the logged-in user
@@ -137,6 +148,48 @@ const AppContent = () => {
     }
   };
 
+  // Admin only: load user accounts
+  const fetchAdminUsers = async () => {
+    setAdminUsersLoading(true);
+
+    try {
+      const res = await getAdminUsers();
+      setAdminUsers(res.data);
+    } catch (err) {
+      if (err.response?.status === 401) {
+        clearLogin();
+        message.error("Please login again.");
+      } else if (err.response?.status === 403) {
+        message.error("Admin access is required.");
+      } else {
+        message.error("Failed to load users.");
+      }
+    } finally {
+      setAdminUsersLoading(false);
+    }
+  };
+
+  // Admin only: load activity logs
+  const fetchAdminActivities = async () => {
+    setActivitiesLoading(true);
+
+    try {
+      const res = await getAdminActivities();
+      setActivities(res.data);
+    } catch (err) {
+      if (err.response?.status === 401) {
+        clearLogin();
+        message.error("Please login again.");
+      } else if (err.response?.status === 403) {
+        message.error("Admin access is required.");
+      } else {
+        message.error("Failed to load activity logs.");
+      }
+    } finally {
+      setActivitiesLoading(false);
+    }
+  };
+
   // Get the latest user profile from the backend
   const fetchProfile = async () => {
     try {
@@ -159,11 +212,21 @@ const AppContent = () => {
   };
 
   useEffect(() => {
-    if (currentUser) {
-      fetchProfile();
-      fetchExpenses();
-      fetchBudgets();
+    if (!currentUser) {
+      return;
     }
+
+    fetchProfile();
+    fetchExpenses();
+    fetchBudgets();
+
+    if (currentUser.role === "admin") {
+      fetchAdminUsers();
+      fetchAdminActivities();
+    }
+
+    // This only needs to run once after loading a saved login
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -181,15 +244,21 @@ const AppContent = () => {
 
     try {
       const res = authMode === "login" ? await loginUser(values) : await registerUser(values);
+      const user = res.data.user;
 
       localStorage.setItem("token", res.data.token);
-      saveUser(res.data.user);
+      saveUser(user);
 
       authForm.resetFields();
       message.success(authMode === "login" ? "Login successful." : "Account created.");
 
       fetchExpenses();
       fetchBudgets();
+
+      if (user.role === "admin") {
+        fetchAdminUsers();
+        fetchAdminActivities();
+      }
     } catch (err) {
       const errorMessage = err.response?.data?.error || "Something went wrong. Please try again.";
       message.error(errorMessage);
@@ -230,7 +299,8 @@ const AppContent = () => {
 
       fetchExpenses();
     } catch (err) {
-      message.error("Failed to save. Please try again.");
+      const errorMessage = err.response?.data?.error || "Failed to save. Please try again.";
+      message.error(errorMessage);
     }
   };
 
@@ -283,6 +353,31 @@ const AppContent = () => {
       const errorMessage = err.response?.data?.error || "Failed to delete budget.";
       message.error(errorMessage);
     }
+  };
+
+  const handleAdminUserUpdate = async (id, data) => {
+    try {
+      await updateAdminUser(id, data);
+      message.success("User account updated.");
+
+      await fetchAdminUsers();
+      await fetchAdminActivities();
+
+      return true;
+    } catch (err) {
+      const errorMessage = err.response?.data?.error || "Failed to update user.";
+      message.error(errorMessage);
+
+      await fetchAdminUsers();
+      return false;
+    }
+  };
+
+  const handleRefreshAdmin = async () => {
+    await fetchAdminUsers();
+    await fetchAdminActivities();
+
+    message.success("Admin data refreshed.");
   };
 
   const handleEdit = (record) => {
@@ -400,6 +495,29 @@ const AppContent = () => {
       ),
       children: <MonthlyTrend expenses={expenses} />,
     },
+    ...(currentUser?.role === "admin"
+      ? [
+          {
+            key: "admin",
+            label: (
+              <span>
+                <TeamOutlined /> Admin Panel
+              </span>
+            ),
+            children: (
+              <AdminPanel
+                users={adminUsers}
+                activities={activities}
+                usersLoading={adminUsersLoading}
+                activitiesLoading={activitiesLoading}
+                currentUser={currentUser}
+                onUpdateUser={handleAdminUserUpdate}
+                onRefresh={handleRefreshAdmin}
+              />
+            ),
+          },
+        ]
+      : []),
     {
       key: "profile",
       label: (

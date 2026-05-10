@@ -320,6 +320,66 @@ body {
   font-weight: 600;
 }
 
+.admin-panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.admin-panel-title {
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+  color: #172033;
+}
+
+.admin-panel-subtitle {
+  display: block;
+  margin-top: 4px;
+}
+
+.admin-stat-card {
+  min-height: 112px;
+  border-radius: 14px;
+  background: white;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.admin-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.12);
+}
+
+.admin-stat-card .ant-card-body {
+  padding: 20px 22px;
+}
+
+.admin-stat-card .ant-statistic-title {
+  font-weight: 600;
+  color: #5f6f83;
+}
+
+.admin-stat-card .ant-statistic-content {
+  font-weight: 700;
+  color: #1677ff;
+}
+
+.active-admin-card .ant-statistic-content {
+  color: #52c41a;
+}
+
+.role-admin-card .ant-statistic-content {
+  color: #722ed1;
+}
+
+.log-admin-card .ant-statistic-content {
+  color: #fa8c16;
+}
+
 @media (max-width: 768px) {
   .app-header {
     height: auto;
@@ -359,5 +419,14 @@ body {
 
   .budget-progress-header {
     flex-direction: column;
+  }
+
+  .admin-panel-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-panel-heading .ant-btn {
+    width: 100%;
   }
 }

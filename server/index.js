@@ -334,7 +334,7 @@ app.post("/auth/login", async (req, res) => {
       email: email.toLowerCase(),
     });
 
-    if (!user || !user.isActive) {
+    if (!user) {
       return res.status(401).json({
         error: "Invalid email or password.",
       });
@@ -345,6 +345,12 @@ app.post("/auth/login", async (req, res) => {
     if (!isPasswordCorrect) {
       return res.status(401).json({
         error: "Invalid email or password.",
+      });
+    }
+
+    if (!user.isActive) {
+      return res.status(403).json({
+        error: "Your account has been disabled.",
       });
     }
 
@@ -487,40 +493,48 @@ app.put("/admin/users/:id", authenticateToken, requireAdmin, async (req, res) =>
   try {
     const { role, isActive } = req.body;
 
-    if (role && !["user", "admin"].includes(role)) {
+    if (role !== undefined) {
       return res.status(400).json({
-        error: "Role must be either user or admin.",
+        error: "User role cannot be changed from the admin panel.",
       });
     }
 
-    const updateData = {};
-
-    if (role !== undefined) {
-      updateData.role = role;
+    if (typeof isActive !== "boolean") {
+      return res.status(400).json({
+        error: "Active status is required.",
+      });
     }
 
-    if (isActive !== undefined) {
-      updateData.isActive = isActive;
+    if (req.params.id === req.user._id.toString()) {
+      return res.status(400).json({
+        error: "Admin cannot change their own account status here.",
+      });
     }
 
-    const updatedUser = await User.findByIdAndUpdate(req.params.id, updateData, {
-      new: true,
-      runValidators: true,
-    }).select("-passwordHash");
+    const targetUser = await User.findById(req.params.id);
 
-    if (!updatedUser) {
+    if (!targetUser) {
       return res.status(404).json({
         error: "User not found.",
       });
     }
 
+    if (targetUser.role !== "user") {
+      return res.status(400).json({
+        error: "Only normal user accounts can be enabled or disabled.",
+      });
+    }
+
+    targetUser.isActive = isActive;
+    await targetUser.save();
+
     await createActivityLog(
       req.user._id,
-      "ADMIN_UPDATE_USER",
-      `Admin updated user account: ${updatedUser.email}.`,
+      "ADMIN_UPDATE_USER_STATUS",
+      `Admin ${isActive ? "enabled" : "disabled"} user account: ${targetUser.email}.`,
     );
 
-    return res.json(updatedUser);
+    return res.json(targetUser);
   } catch (err) {
     return res.status(400).json({
       error: "Failed to update user.",
@@ -537,31 +551,32 @@ app.delete("/admin/users/:id", authenticateToken, requireAdmin, async (req, res)
       });
     }
 
-    const deletedUser = await User.findByIdAndUpdate(
-      req.params.id,
-      {
-        isActive: false,
-      },
-      {
-        new: true,
-      },
-    ).select("-passwordHash");
+    const targetUser = await User.findById(req.params.id);
 
-    if (!deletedUser) {
+    if (!targetUser) {
       return res.status(404).json({
         error: "User not found.",
       });
     }
 
+    if (targetUser.role !== "user") {
+      return res.status(400).json({
+        error: "Only normal user accounts can be deactivated.",
+      });
+    }
+
+    targetUser.isActive = false;
+    await targetUser.save();
+
     await createActivityLog(
       req.user._id,
       "ADMIN_DELETE_USER",
-      `Admin deactivated user account: ${deletedUser.email}.`,
+      `Admin deactivated user account: ${targetUser.email}.`,
     );
 
     return res.json({
       message: "User deactivated successfully.",
-      user: deletedUser,
+      user: targetUser,
     });
   } catch (err) {
     return res.status(500).json({
@@ -617,9 +632,9 @@ app.post("/expenses", authenticateToken, async (req, res) => {
 
     const expenseAmount = Number(amount);
 
-    if (!Number.isFinite(expenseAmount) || expenseAmount < 0) {
+    if (!Number.isFinite(expenseAmount) || expenseAmount <= 0) {
       return res.status(400).json({
-        error: "Amount must be a valid number.",
+        error: "Amount must be greater than 0.",
       });
     }
 
@@ -652,9 +667,9 @@ app.put("/expenses/:id", authenticateToken, async (req, res) => {
     if (updateData.amount !== undefined) {
       const expenseAmount = Number(updateData.amount);
 
-      if (!Number.isFinite(expenseAmount) || expenseAmount < 0) {
+      if (!Number.isFinite(expenseAmount) || expenseAmount <= 0) {
         return res.status(400).json({
-          error: "Amount must be a valid number.",
+          error: "Amount must be greater than 0.",
         });
       }
 

@@ -32,4 +32,8 @@ export const createBudget = (data) => api.post("/budgets", data);
 export const updateBudget = (id, data) => api.put(`/budgets/${id}`, data);
 export const deleteBudget = (id) => api.delete(`/budgets/${id}`);
 
+export const getAdminUsers = () => api.get("/admin/users");
+export const updateAdminUser = (id, data) => api.put(`/admin/users/${id}`, data);
+export const getAdminActivities = () => api.get("/admin/activities");
+
 export default api;
