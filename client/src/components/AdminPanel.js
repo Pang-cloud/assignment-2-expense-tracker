@@ -17,8 +17,10 @@ import {
   ReloadOutlined,
   SafetyCertificateOutlined,
   TeamOutlined,
+  UserOutlined,
   UserSwitchOutlined,
 } from "@ant-design/icons";
+import { getAvatarValue } from "../constants/avatarOptions";
 
 const { Text } = Typography;
 
@@ -80,15 +82,22 @@ const AdminPanel = ({
       key: "user",
       render: (_, record) => {
         const isCurrentUser = (record._id || record.id) === currentUserId;
+        const avatar = getAvatarValue(record.avatar);
 
         return (
-          <Space direction="vertical" size={2}>
-            <Space>
-              <Text strong>{record.username}</Text>
-              {isCurrentUser && <Tag color="blue">You</Tag>}
-            </Space>
+          <Space>
+            <span className={`mini-avatar avatar-${avatar}`}>
+              <UserOutlined />
+            </span>
 
-            <Text type="secondary">{record.email}</Text>
+            <Space direction="vertical" size={2}>
+              <Space>
+                <Text strong>{record.username}</Text>
+                {isCurrentUser && <Tag color="blue">You</Tag>}
+              </Space>
+
+              <Text type="secondary">{record.email}</Text>
+            </Space>
           </Space>
         );
       },
@@ -230,7 +239,10 @@ const AdminPanel = ({
             columns={userColumns}
             dataSource={users}
             loading={usersLoading}
-            pagination={{ pageSize: 6 }}
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: false,
+            }}
           />
         )}
       </Card>
@@ -244,7 +256,10 @@ const AdminPanel = ({
             columns={activityColumns}
             dataSource={activities}
             loading={activitiesLoading}
-            pagination={{ pageSize: 6 }}
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: false,
+            }}
           />
         )}
       </Card>

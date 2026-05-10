@@ -1,61 +1,72 @@
-import React from 'react';
-import { Table, Button, Space, Tag, Popconfirm } from 'antd';
-import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import React from "react";
+import { Button, Popconfirm, Space, Table, Tag } from "antd";
+import { DeleteOutlined, EditOutlined } from "@ant-design/icons";
 
-// Category color mapping for visual distinction
-const CATEGORIES = ['Food', 'Transport', 'Shopping', 'Entertainment', 'Health', 'Education', 'Utilities', 'Other'];
-const CATEGORY_COLORS = {
-  Food: 'orange', Transport: 'blue', Shopping: 'purple',
-  Entertainment: 'magenta', Health: 'green', Education: 'cyan',
-  Utilities: 'gold', Other: 'default',
+const formatMoney = (value) => {
+  return `$${Number(value || 0).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 };
 
-// Displays all expense records in a sortable, filterable table
-const ExpenseTable = ({ expenses, loading, onEdit, onDelete, searchTerm = '' }) => {
-  // Filter by expense item (title) in real-time as user types
-  const filteredExpenses = searchTerm.trim()
-    ? expenses.filter((item) =>
-        item.title?.toLowerCase().includes(searchTerm.trim().toLowerCase())
-      )
-    : expenses;
+const ExpenseTable = ({ expenses, loading, onEdit, onDelete, searchTerm }) => {
+  const filteredExpenses = expenses.filter((item) => {
+    const keyword = searchTerm.trim().toLowerCase();
+
+    if (!keyword) {
+      return true;
+    }
+
+    return (
+      item.title?.toLowerCase().includes(keyword) ||
+      item.category?.toLowerCase().includes(keyword) ||
+      item.description?.toLowerCase().includes(keyword)
+    );
+  });
+
   const columns = [
     {
-      title: 'Date',
-      dataIndex: 'date',
-      key: 'date',
-      sorter: (a, b) => a.date.localeCompare(b.date),
-    },
-    { title: 'Title', dataIndex: 'title', key: 'title' },
-    {
-      title: 'Category',
-      dataIndex: 'category',
-      key: 'category',
-      render: (cat) => <Tag color={CATEGORY_COLORS[cat] || 'default'}>{cat}</Tag>,
-      filters: CATEGORIES.map((cat) => ({ text: cat, value: cat })),
-      onFilter: (value, record) => record.category === value,
+      title: "Title",
+      dataIndex: "title",
+      key: "title",
+      render: (value) => <strong>{value}</strong>,
     },
     {
-      title: 'Amount',
-      dataIndex: 'amount',
-      key: 'amount',
-      render: (val) => `$${val?.toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
-      sorter: (a, b) => a.amount - b.amount,
+      title: "Category",
+      dataIndex: "category",
+      key: "category",
+      render: (value) => <Tag color="blue">{value}</Tag>,
     },
     {
-      title: 'Description',
-      dataIndex: 'description',
-      key: 'description',
-      render: (val) => val || '-',
+      title: "Amount",
+      dataIndex: "amount",
+      key: "amount",
+      render: (value) => <strong>{formatMoney(value)}</strong>,
+      sorter: (a, b) => Number(a.amount) - Number(b.amount),
     },
     {
-      title: 'Action',
-      key: 'action',
+      title: "Date",
+      dataIndex: "date",
+      key: "date",
+      sorter: (a, b) => new Date(a.date) - new Date(b.date),
+    },
+    {
+      title: "Description",
+      dataIndex: "description",
+      key: "description",
+      render: (value) => value || "-",
+    },
+    {
+      title: "Action",
+      key: "action",
+      align: "center",
       render: (_, record) => (
-        <Space size="middle">
+        <Space>
           <Button icon={<EditOutlined />} onClick={() => onEdit(record)} />
+
           <Popconfirm
             title="Delete this expense?"
-            description="This action cannot be undone."
+            description="This expense record will be removed."
             onConfirm={() => onDelete(record._id)}
             okText="Delete"
             cancelText="Cancel"
@@ -70,13 +81,13 @@ const ExpenseTable = ({ expenses, loading, onEdit, onDelete, searchTerm = '' }) 
 
   return (
     <Table
+      rowKey="_id"
       dataSource={filteredExpenses}
       columns={columns}
-      rowKey="_id"
       loading={loading}
-      pagination={{ pageSize: 10 }}
-      locale={{
-        emptyText: searchTerm.trim() ? `No results found for "${searchTerm}"` : 'No data',
+      pagination={{
+        pageSize: 10,
+        showSizeChanger: false,
       }}
     />
   );

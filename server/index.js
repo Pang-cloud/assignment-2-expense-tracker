@@ -18,6 +18,8 @@ const PORT = process.env.PORT || 5001;
 const MONGODB_URI = process.env.MONGODB_URI;
 const JWT_SECRET = process.env.JWT_SECRET;
 
+const AVATAR_OPTIONS = ["blue", "purple", "green", "orange", "red", "navy"];
+
 if (!MONGODB_URI) {
   console.error("Missing MONGODB_URI in .env file.");
   process.exit(1);
@@ -55,6 +57,11 @@ const UserSchema = new mongoose.Schema(
     passwordHash: {
       type: String,
       required: true,
+    },
+    avatar: {
+      type: String,
+      enum: AVATAR_OPTIONS,
+      default: "blue",
     },
     role: {
       type: String,
@@ -177,6 +184,7 @@ const formatUser = (user) => {
     id: user._id,
     username: user.username,
     email: user.email,
+    avatar: user.avatar || "blue",
     role: user.role,
     isActive: user.isActive,
     createdAt: user.createdAt,
@@ -211,6 +219,10 @@ const createActivityLog = async (userId, action, details = "") => {
 
 const isValidBudgetMonth = (month) => {
   return /^\d{4}-\d{2}$/.test(month);
+};
+
+const isValidAvatar = (avatar) => {
+  return AVATAR_OPTIONS.includes(avatar);
 };
 
 // Check if the user is logged in
@@ -267,7 +279,7 @@ app.get("/", (req, res) => {
 
 app.post("/auth/register", async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    const { username, email, password, avatar } = req.body;
 
     if (!username || !email || !password) {
       return res.status(400).json({
@@ -278,6 +290,12 @@ app.post("/auth/register", async (req, res) => {
     if (password.length < 6) {
       return res.status(400).json({
         error: "Password must be at least 6 characters.",
+      });
+    }
+
+    if (avatar && !isValidAvatar(avatar)) {
+      return res.status(400).json({
+        error: "Invalid avatar selected.",
       });
     }
 
@@ -298,6 +316,7 @@ app.post("/auth/register", async (req, res) => {
       username,
       email: email.toLowerCase(),
       passwordHash,
+      avatar: avatar || "blue",
       role: userCount === 0 ? "admin" : "user",
     });
 
@@ -394,11 +413,17 @@ app.get("/users/me", authenticateToken, async (req, res) => {
 
 app.put("/users/me", authenticateToken, async (req, res) => {
   try {
-    const { username, email } = req.body;
+    const { username, email, avatar } = req.body;
 
     if (!username || !email) {
       return res.status(400).json({
         error: "Username and email are required.",
+      });
+    }
+
+    if (avatar && !isValidAvatar(avatar)) {
+      return res.status(400).json({
+        error: "Invalid avatar selected.",
       });
     }
 
@@ -418,6 +443,7 @@ app.put("/users/me", authenticateToken, async (req, res) => {
       {
         username,
         email: email.toLowerCase(),
+        avatar: avatar || "blue",
       },
       {
         new: true,
@@ -438,18 +464,28 @@ app.put("/users/me", authenticateToken, async (req, res) => {
 
 app.delete("/users/me", authenticateToken, async (req, res) => {
   try {
+    if (req.user.role === "admin") {
+      return res.status(400).json({
+        error: "Admin accounts cannot be deactivated from the profile page.",
+      });
+    }
+
     await User.findByIdAndUpdate(req.user._id, {
       isActive: false,
     });
 
-    await createActivityLog(req.user._id, "DELETE_ACCOUNT", "User deactivated their own account.");
+    await createActivityLog(
+      req.user._id,
+      "DEACTIVATE_ACCOUNT",
+      "User deactivated their own account.",
+    );
 
     return res.json({
       message: "Account deactivated successfully.",
     });
   } catch (err) {
     return res.status(500).json({
-      error: "Failed to delete account.",
+      error: "Failed to deactivate account.",
       details: err.message,
     });
   }

@@ -152,6 +152,7 @@ const BudgetPanel = ({ budgets, expenses, loading, onCreate, onUpdate, onDelete 
     {
       title: "Status",
       key: "status",
+      align: "center",
       render: (_, record) => {
         const spent = getMonthSpending(expenses, record.month);
         const over = spent > Number(record.limit);
@@ -162,6 +163,7 @@ const BudgetPanel = ({ budgets, expenses, loading, onCreate, onUpdate, onDelete 
     {
       title: "Action",
       key: "action",
+      align: "center",
       render: (_, record) => (
         <Space>
           <Button icon={<EditOutlined />} onClick={() => openEditModal(record)} />
@@ -290,7 +292,10 @@ const BudgetPanel = ({ budgets, expenses, loading, onCreate, onUpdate, onDelete 
             dataSource={budgets}
             columns={columns}
             loading={loading}
-            pagination={{ pageSize: 6 }}
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: false,
+            }}
           />
         )}
       </Card>

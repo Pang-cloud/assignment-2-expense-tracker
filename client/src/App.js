@@ -16,6 +16,7 @@ import {
   Tag,
   Typography,
   ConfigProvider,
+  Radio,
 } from "antd";
 import {
   PlusOutlined,
@@ -38,6 +39,7 @@ import {
   logoutUser,
   getProfile,
   updateProfile,
+  deactivateAccount,
   getExpenses,
   createExpense,
   updateExpense,
@@ -51,12 +53,15 @@ import {
   getAdminActivities,
 } from "./services/api";
 
+import { AVATAR_OPTIONS, getAvatarValue } from "./constants/avatarOptions";
+
 import ExpenseTable from "./components/ExpenseTable";
 import ExpenseForm from "./components/ExpenseForm";
 import CategorySummary from "./components/CategorySummary";
 import MonthlyTrend from "./components/MonthlyTrend";
 import BudgetPanel from "./components/BudgetPanel";
 import AdminPanel from "./components/AdminPanel";
+import ProfilePanel from "./components/ProfilePanel";
 
 const { Header, Content } = Layout;
 const { Title, Text } = Typography;
@@ -65,7 +70,6 @@ const AppContent = () => {
   const { message } = AntApp.useApp();
 
   const savedUser = localStorage.getItem("user");
-
   const [currentUser, setCurrentUser] = useState(savedUser ? JSON.parse(savedUser) : null);
 
   const [authMode, setAuthMode] = useState("login");
@@ -89,15 +93,12 @@ const AppContent = () => {
 
   const [expenseForm] = Form.useForm();
   const [authForm] = Form.useForm();
-  const [profileForm] = Form.useForm();
 
-  // Save user info after login or register
   const saveUser = (user) => {
     setCurrentUser(user);
     localStorage.setItem("user", JSON.stringify(user));
   };
 
-  // Clear local login data after logout or expired token
   const clearLogin = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -108,7 +109,6 @@ const AppContent = () => {
     setActivities([]);
   };
 
-  // Load expenses for the logged-in user
   const fetchExpenses = async () => {
     setLoading(true);
     setError(null);
@@ -129,7 +129,6 @@ const AppContent = () => {
     }
   };
 
-  // Load budgets for the logged-in user
   const fetchBudgets = async () => {
     setBudgetLoading(true);
 
@@ -148,7 +147,6 @@ const AppContent = () => {
     }
   };
 
-  // Admin only: load user accounts
   const fetchAdminUsers = async () => {
     setAdminUsersLoading(true);
 
@@ -169,7 +167,6 @@ const AppContent = () => {
     }
   };
 
-  // Admin only: load activity logs
   const fetchAdminActivities = async () => {
     setActivitiesLoading(true);
 
@@ -190,22 +187,17 @@ const AppContent = () => {
     }
   };
 
-  // Get the latest user profile from the backend
   const fetchProfile = async () => {
     try {
       const res = await getProfile();
 
       const user = {
         ...res.data,
-        id: res.data._id,
+        id: res.data._id || res.data.id,
+        avatar: getAvatarValue(res.data.avatar),
       };
 
       saveUser(user);
-
-      profileForm.setFieldsValue({
-        username: user.username,
-        email: user.email,
-      });
     } catch (err) {
       clearLogin();
     }
@@ -229,22 +221,24 @@ const AppContent = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    if (currentUser) {
-      profileForm.setFieldsValue({
-        username: currentUser.username,
-        email: currentUser.email,
-      });
-    }
-  }, [currentUser, profileForm]);
-
-  // Login or register based on the selected mode
   const handleAuthSubmit = async (values) => {
     setAuthLoading(true);
 
     try {
-      const res = authMode === "login" ? await loginUser(values) : await registerUser(values);
-      const user = res.data.user;
+      const payload =
+        authMode === "register"
+          ? {
+              ...values,
+              avatar: values.avatar || "blue",
+            }
+          : values;
+
+      const res = authMode === "login" ? await loginUser(payload) : await registerUser(payload);
+
+      const user = {
+        ...res.data.user,
+        avatar: getAvatarValue(res.data.user.avatar),
+      };
 
       localStorage.setItem("token", res.data.token);
       saveUser(user);
@@ -402,14 +396,32 @@ const AppContent = () => {
 
       const user = {
         ...res.data,
-        id: res.data._id,
+        id: res.data._id || res.data.id,
+        avatar: getAvatarValue(res.data.avatar),
       };
 
       saveUser(user);
       message.success("Profile updated.");
+
+      return true;
     } catch (err) {
       const errorMessage = err.response?.data?.error || "Failed to update profile.";
       message.error(errorMessage);
+      return false;
+    }
+  };
+
+  const handleDeactivateAccount = async () => {
+    try {
+      await deactivateAccount();
+      clearLogin();
+      message.success("Account deactivated.");
+
+      return true;
+    } catch (err) {
+      const errorMessage = err.response?.data?.error || "Failed to deactivate account.";
+      message.error(errorMessage);
+      return false;
     }
   };
 
@@ -423,6 +435,8 @@ const AppContent = () => {
 
   const expenseCount = expenses.length;
   const averageAmount = expenseCount > 0 ? totalAmount / expenseCount : 0;
+
+  const currentAvatar = getAvatarValue(currentUser?.avatar);
 
   const tabItems = [
     {
@@ -526,51 +540,11 @@ const AppContent = () => {
         </span>
       ),
       children: (
-        <Row gutter={[20, 20]}>
-          <Col xs={24} md={9}>
-            <Card className="profile-card" variant="borderless">
-              <div className="profile-avatar">
-                <UserOutlined />
-              </div>
-
-              <Title level={4} className="profile-name">
-                {currentUser?.username}
-              </Title>
-
-              <Text className="profile-email">{currentUser?.email}</Text>
-
-              <Tag color={currentUser?.role === "admin" ? "blue" : "default"}>
-                {currentUser?.role === "admin" ? "Admin Account" : "User Account"}
-              </Tag>
-            </Card>
-          </Col>
-
-          <Col xs={24} md={15}>
-            <Card title="Account Details" className="content-card" variant="borderless">
-              <Form form={profileForm} layout="vertical" onFinish={handleUpdateProfile}>
-                <Form.Item
-                  name="username"
-                  label="Username"
-                  rules={[{ required: true, message: "Please enter your username." }]}
-                >
-                  <Input />
-                </Form.Item>
-
-                <Form.Item
-                  name="email"
-                  label="Email"
-                  rules={[{ required: true, message: "Please enter your email." }]}
-                >
-                  <Input />
-                </Form.Item>
-
-                <Button type="primary" htmlType="submit">
-                  Save Changes
-                </Button>
-              </Form>
-            </Card>
-          </Col>
-        </Row>
+        <ProfilePanel
+          currentUser={currentUser}
+          onUpdateProfile={handleUpdateProfile}
+          onDeactivateAccount={handleDeactivateAccount}
+        />
       ),
     },
   ];
@@ -617,21 +591,48 @@ const AppContent = () => {
                   onClick={() => {
                     setAuthMode("register");
                     authForm.resetFields();
+                    authForm.setFieldsValue({ avatar: "blue" });
                   }}
                 >
                   Register
                 </Button>
               </div>
 
-              <Form form={authForm} layout="vertical" onFinish={handleAuthSubmit}>
+              <Form
+                form={authForm}
+                layout="vertical"
+                onFinish={handleAuthSubmit}
+                initialValues={{ avatar: "blue" }}
+              >
                 {authMode === "register" && (
-                  <Form.Item
-                    name="username"
-                    label="Username"
-                    rules={[{ required: true, message: "Please enter a username." }]}
-                  >
-                    <Input placeholder="e.g. Pang" />
-                  </Form.Item>
+                  <>
+                    <Form.Item
+                      name="username"
+                      label="Username"
+                      rules={[{ required: true, message: "Please enter a username." }]}
+                    >
+                      <Input placeholder="e.g. Pang" />
+                    </Form.Item>
+
+                    <Form.Item
+                      name="avatar"
+                      label="Choose Avatar"
+                      rules={[{ required: true, message: "Please select an avatar." }]}
+                    >
+                      <Radio.Group className="avatar-picker">
+                        {AVATAR_OPTIONS.map((item) => (
+                          <Radio.Button key={item.value} value={item.value}>
+                            <Space>
+                              <span className={`mini-avatar avatar-${item.value}`}>
+                                <UserOutlined />
+                              </span>
+                              {item.label}
+                            </Space>
+                          </Radio.Button>
+                        ))}
+                      </Radio.Group>
+                    </Form.Item>
+                  </>
                 )}
 
                 <Form.Item
@@ -674,7 +675,9 @@ const AppContent = () => {
           </Tag>
 
           <div className="user-badge">
-            <UserOutlined />
+            <span className={`header-avatar avatar-${currentAvatar}`}>
+              <UserOutlined />
+            </span>
             <span>{currentUser.username}</span>
           </div>
 

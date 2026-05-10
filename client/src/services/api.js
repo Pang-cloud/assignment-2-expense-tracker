@@ -21,6 +21,7 @@ export const logoutUser = () => api.post("/auth/logout");
 
 export const getProfile = () => api.get("/users/me");
 export const updateProfile = (data) => api.put("/users/me", data);
+export const deactivateAccount = () => api.delete("/users/me");
 
 export const getExpenses = () => api.get("/expenses");
 export const createExpense = (data) => api.post("/expenses", data);
