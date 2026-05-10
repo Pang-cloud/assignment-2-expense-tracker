@@ -185,9 +185,7 @@ const BudgetPanel = ({ budgets, expenses, loading, onCreate, onUpdate, onDelete 
 
   return (
     <Space direction="vertical" size={20} style={{ width: "100%" }}>
-      <div className="budget-toolbar">
-        <Text className="budget-section-title">Monthly Budget</Text>
-
+      <div className="budget-toolbar" style={{ justifyContent: "flex-end" }}>
         <Space wrap>
           <Input
             type="month"

@@ -1,9 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import {
-  Button,
   Card,
   Col,
   Empty,
+  Input,
   Row,
   Space,
   Statistic,
@@ -14,8 +14,8 @@ import {
 } from "antd";
 import {
   HistoryOutlined,
-  ReloadOutlined,
   SafetyCertificateOutlined,
+  SearchOutlined,
   TeamOutlined,
   UserOutlined,
   UserSwitchOutlined,
@@ -69,12 +69,35 @@ const AdminPanel = ({
   activitiesLoading,
   currentUser,
   onUpdateUser,
-  onRefresh,
 }) => {
+  const [activitySearch, setActivitySearch] = useState("");
+
   const currentUserId = currentUser?._id || currentUser?.id;
 
   const activeUsers = users.filter((user) => user.isActive).length;
   const adminUsers = users.filter((user) => user.role === "admin").length;
+
+  const filteredActivities = activities.filter((item) => {
+    const keyword = activitySearch.trim().toLowerCase();
+
+    if (!keyword) {
+      return true;
+    }
+
+    const user = item.userId;
+    const username = user && typeof user === "object" ? user.username : "";
+    const email = user && typeof user === "object" ? user.email : "";
+    const role = user && typeof user === "object" ? user.role : "";
+
+    return (
+      item.action?.toLowerCase().includes(keyword) ||
+      item.details?.toLowerCase().includes(keyword) ||
+      username?.toLowerCase().includes(keyword) ||
+      email?.toLowerCase().includes(keyword) ||
+      role?.toLowerCase().includes(keyword) ||
+      formatDateTime(item.createdAt).toLowerCase().includes(keyword)
+    );
+  });
 
   const userColumns = [
     {
@@ -183,19 +206,6 @@ const AdminPanel = ({
 
   return (
     <Space direction="vertical" size={20} style={{ width: "100%" }}>
-      <div className="admin-panel-heading">
-        <div>
-          <Text className="admin-panel-title">Admin Panel</Text>
-          <Text type="secondary" className="admin-panel-subtitle">
-            Manage normal user accounts and review activity records.
-          </Text>
-        </div>
-
-        <Button icon={<ReloadOutlined />} onClick={onRefresh}>
-          Refresh
-        </Button>
-      </div>
-
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={12} lg={6}>
           <Card className="admin-stat-card" variant="borderless">
@@ -247,14 +257,28 @@ const AdminPanel = ({
         )}
       </Card>
 
-      <Card title="Activity Logs" className="content-card" variant="borderless">
+      <Card
+        title="Activity Logs"
+        className="content-card"
+        variant="borderless"
+        extra={
+          <Input
+            placeholder="Search logs..."
+            prefix={<SearchOutlined />}
+            allowClear
+            value={activitySearch}
+            onChange={(e) => setActivitySearch(e.target.value)}
+            style={{ width: 260 }}
+          />
+        }
+      >
         {activities.length === 0 ? (
           <Empty description="No activity logs found." />
         ) : (
           <Table
             rowKey="_id"
             columns={activityColumns}
-            dataSource={activities}
+            dataSource={filteredActivities}
             loading={activitiesLoading}
             pagination={{
               pageSize: 10,

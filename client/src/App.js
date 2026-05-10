@@ -187,6 +187,23 @@ const AppContent = () => {
     }
   };
 
+  const refreshAdminData = async () => {
+    if (currentUser?.role !== "admin") {
+      return;
+    }
+
+    await fetchAdminUsers();
+    await fetchAdminActivities();
+  };
+
+  const refreshAdminLogs = async () => {
+    if (currentUser?.role !== "admin") {
+      return;
+    }
+
+    await fetchAdminActivities();
+  };
+
   const fetchProfile = async () => {
     try {
       const res = await getProfile();
@@ -291,7 +308,8 @@ const AppContent = () => {
       expenseForm.resetFields();
       setEditingItem(null);
 
-      fetchExpenses();
+      await fetchExpenses();
+      await refreshAdminLogs();
     } catch (err) {
       const errorMessage = err.response?.data?.error || "Failed to save. Please try again.";
       message.error(errorMessage);
@@ -303,7 +321,8 @@ const AppContent = () => {
       await deleteExpense(id);
       message.success("Expense deleted.");
 
-      fetchExpenses();
+      await fetchExpenses();
+      await refreshAdminLogs();
     } catch (err) {
       message.error("Failed to delete.");
     }
@@ -315,6 +334,8 @@ const AppContent = () => {
       message.success("Budget added successfully.");
 
       await fetchBudgets();
+      await refreshAdminLogs();
+
       return true;
     } catch (err) {
       const errorMessage = err.response?.data?.error || "Failed to add budget.";
@@ -329,6 +350,8 @@ const AppContent = () => {
       message.success("Budget updated successfully.");
 
       await fetchBudgets();
+      await refreshAdminLogs();
+
       return true;
     } catch (err) {
       const errorMessage = err.response?.data?.error || "Failed to update budget.";
@@ -343,6 +366,7 @@ const AppContent = () => {
       message.success("Budget deleted.");
 
       await fetchBudgets();
+      await refreshAdminLogs();
     } catch (err) {
       const errorMessage = err.response?.data?.error || "Failed to delete budget.";
       message.error(errorMessage);
@@ -354,8 +378,7 @@ const AppContent = () => {
       await updateAdminUser(id, data);
       message.success("User account updated.");
 
-      await fetchAdminUsers();
-      await fetchAdminActivities();
+      await refreshAdminData();
 
       return true;
     } catch (err) {
@@ -365,13 +388,6 @@ const AppContent = () => {
       await fetchAdminUsers();
       return false;
     }
-  };
-
-  const handleRefreshAdmin = async () => {
-    await fetchAdminUsers();
-    await fetchAdminActivities();
-
-    message.success("Admin data refreshed.");
   };
 
   const handleEdit = (record) => {
@@ -402,6 +418,8 @@ const AppContent = () => {
 
       saveUser(user);
       message.success("Profile updated.");
+
+      await refreshAdminLogs();
 
       return true;
     } catch (err) {
@@ -526,7 +544,6 @@ const AppContent = () => {
                 activitiesLoading={activitiesLoading}
                 currentUser={currentUser}
                 onUpdateUser={handleAdminUserUpdate}
-                onRefresh={handleRefreshAdmin}
               />
             ),
           },
