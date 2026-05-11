@@ -17,6 +17,7 @@ import {
   Typography,
   ConfigProvider,
   Radio,
+  Popconfirm,
 } from "antd";
 import {
   PlusOutlined,
@@ -628,7 +629,7 @@ const AppContent = () => {
                       label="Username"
                       rules={[{ required: true, message: "Please enter a username." }]}
                     >
-                      <Input placeholder="e.g. Pang" />
+                      <Input />
                     </Form.Item>
 
                     <Form.Item
@@ -657,7 +658,7 @@ const AppContent = () => {
                   label="Email"
                   rules={[{ required: true, message: "Please enter your email." }]}
                 >
-                  <Input placeholder="e.g. pang@test.com" />
+                  <Input />
                 </Form.Item>
 
                 <Form.Item
@@ -665,7 +666,9 @@ const AppContent = () => {
                   label="Password"
                   rules={[{ required: true, message: "Please enter your password." }]}
                 >
-                  <Input.Password placeholder="At least 6 characters" />
+                  <Input.Password
+                    placeholder={authMode === "register" ? "At least 6 characters" : ""}
+                  />
                 </Form.Item>
 
                 <Button type="primary" htmlType="submit" loading={authLoading} block>
@@ -698,9 +701,15 @@ const AppContent = () => {
             <span>{currentUser.username}</span>
           </div>
 
-          <Button icon={<LogoutOutlined />} onClick={handleLogout}>
-            Logout
-          </Button>
+          <Popconfirm
+            title="Logout this account?"
+            description="You will return to the login page."
+            okText="Logout"
+            cancelText="Cancel"
+            onConfirm={handleLogout}
+          >
+            <Button icon={<LogoutOutlined />}>Logout</Button>
+          </Popconfirm>
         </Space>
       </Header>
 

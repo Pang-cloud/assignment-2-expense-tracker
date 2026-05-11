@@ -9,6 +9,21 @@ const formatMoney = (value) => {
   })}`;
 };
 
+const getCategoryColor = (category) => {
+  const colors = {
+    Food: "orange",
+    Transport: "blue",
+    Entertainment: "magenta",
+    Shopping: "purple",
+    Utilities: "red",
+    Health: "green",
+    Education: "cyan",
+    Other: "default",
+  };
+
+  return colors[category] || "default";
+};
+
 const ExpenseTable = ({ expenses, loading, onEdit, onDelete, searchTerm }) => {
   const filteredExpenses = expenses.filter((item) => {
     const keyword = searchTerm.trim().toLowerCase();
@@ -35,7 +50,7 @@ const ExpenseTable = ({ expenses, loading, onEdit, onDelete, searchTerm }) => {
       title: "Category",
       dataIndex: "category",
       key: "category",
-      render: (value) => <Tag color="blue">{value}</Tag>,
+      render: (value) => <Tag color={getCategoryColor(value)}>{value}</Tag>,
     },
     {
       title: "Amount",
